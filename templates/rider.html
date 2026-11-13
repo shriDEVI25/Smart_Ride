@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartRide - Rider Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <div>
+        <h1>🚖 SmartRide</h1>
+        <p>Instant ride booking with fair, transparent pricing</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="session-name" id="riderNameBadge"></span>
+        <button class="btn-logout" onclick="smartRideAuth.logout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">1. Choose Your Ride</div>
+      <div class="vehicle-grid">
+        <label class="vehicle-card selected" data-vehicle="bike">
+          <input type="radio" name="vehicle_type" value="bike" checked>
+          <span class="vehicle-icon">🏍️</span>
+          <div class="vehicle-name">Bike</div>
+          <div class="vehicle-rate">₹20 + ₹8/km</div>
+        </label>
+
+        <label class="vehicle-card" data-vehicle="auto">
+          <input type="radio" name="vehicle_type" value="auto">
+          <span class="vehicle-icon">🛺</span>
+          <div class="vehicle-name">Auto</div>
+          <div class="vehicle-rate">₹30 + ₹12/km</div>
+        </label>
+
+        <label class="vehicle-card" data-vehicle="car">
+          <input type="radio" name="vehicle_type" value="car">
+          <span class="vehicle-icon">🚗</span>
+          <div class="vehicle-name">Car</div>
+          <div class="vehicle-rate">₹50 + ₹18/km</div>
+        </label>
+      </div>
+
+      <div class="section-title">2. Choose Pickup & Drop Location</div>
+
+      <div class="form-group">
+        <label class="form-label">🟢 Pickup Location <span style="font-weight:400;font-size:0.85rem;opacity:0.75;">(Where should we pick you up?)</span></label>
+        <input type="text" id="pickup_location_name" class="input-field" placeholder="e.g. Koramangala, Bangalore" autocomplete="off">
+        <input type="hidden" id="pickup_lat">
+        <input type="hidden" id="pickup_lng">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">🔴 Drop Location <span style="font-weight:400;font-size:0.85rem;opacity:0.75;">(Where do you want to go?)</span></label>
+        <input type="text" id="drop_location_name" class="input-field" placeholder="e.g. Indiranagar, Bangalore" autocomplete="off">
+        <input type="hidden" id="drop_lat">
+        <input type="hidden" id="drop_lng">
+      </div>
+
+      <!-- Safety & Payment Options -->
+      <div class="safety-payment-section">
+        <!-- Pink Ride / Women Driver Only Toggle -->
+        <div class="pink-ride-card">
+          <div class="pink-ride-info">
+            <div class="pink-ride-title">
+              <span class="pink-badge-icon">🌸</span>
+              <strong>Pink Ride</strong> (Women Driver Only)
+            </div>
+            <div class="pink-ride-desc">Request verified female drivers for enhanced safety & comfort.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="women_driver_only" />
+            <span class="toggle-slider pink-slider"></span>
+          </label>
+        </div>
+
+        <!-- Payment Method Selector -->
+        <div class="form-group" style="margin-top: 1rem;">
+          <label class="form-label">Payment Method</label>
+          <div class="payment-method-grid">
+            <label class="payment-option">
+              <input type="radio" name="payment_method" value="upi" checked />
+              <span class="payment-card">
+                <span class="payment-icon">📱</span>
+                <span class="payment-title">UPI</span>
+                <span class="payment-sub">GPay / PhonePe</span>
+              </span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="payment_method" value="card" />
+              <span class="payment-card">
+                <span class="payment-icon">💳</span>
+                <span class="payment-title">Card</span>
+                <span class="payment-sub">Debit / Credit</span>
+              </span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="payment_method" value="cash" />
+              <span class="payment-card">
+                <span class="payment-icon">💵</span>
+                <span class="payment-title">Cash</span>
+                <span class="payment-sub">Pay Driver</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button type="button" id="btn-detect-location" class="btn btn-secondary">
+          📍 Detect Location
+        </button>
+        <button type="button" id="btn-calculate-fare" class="btn btn-primary">
+          ⚡ Calculate Fare
+        </button>
+      </div>
+
+      <div id="status-alert" class="alert"></div>
+
+      <!-- Interactive Map Container -->
+      <div id="map" style="height: 320px; width: 100%; border-radius: 10px; margin-top: 15px;"></div>
+    </div>
+
+    <!-- Trip Summary Card -->
+    <div id="summary-card" class="summary-card card">
+      <div class="summary-header">
+        <div>
+          <span class="detail-label">Estimated Fare</span>
+          <div class="fare-amount" id="summary-fare">₹0.00</div>
+        </div>
+        <div>
+          <span id="summary-status" class="status-badge status-requested">Calculated</span>
+        </div>
+      </div>
+
+      <div class="details-grid">
+        <div class="detail-item">
+          <div class="detail-label">Distance</div>
+          <div class="detail-val" id="summary-distance">0.0 km</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Vehicle Selected</div>
+          <div class="detail-val" id="summary-vehicle" style="text-transform: capitalize;">-</div>
+        </div>
+      </div>
+
+      <div id="pin-container" style="display: none; margin-bottom: 1.25rem; text-align: center; background: #0f172a; border-radius: 8px; padding: 1rem; border: 1px dashed #eab308;">
+        <div class="detail-label" style="margin-bottom: 0.5rem;">Your Security PIN (Share with Driver)</div>
+        <div class="pin-badge" id="summary-pin">----</div>
+        <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.4rem;">Trip ID: #<span id="summary-trip-id">-</span></div>
+      </div>
+
+      <button type="button" id="btn-book-ride" class="btn btn-success" style="width: 100%; font-size: 1.05rem; padding: 0.85rem;">
+        🚀 Book Ride
+      </button>
+    </div>
+
+    <!-- Post-Ride Payment Modal -->
+    <div id="payment-modal" class="payment-modal-backdrop" style="display: none;">
+      <div class="payment-modal-card card">
+        <div class="payment-modal-icon">🎉</div>
+        <h2 class="payment-modal-title">Trip Completed!</h2>
+        <p class="payment-modal-sub">Thank you for traveling with SmartRide.</p>
+
+        <div class="payment-summary-box">
+          <div class="payment-row">
+            <span>Trip ID:</span>
+            <strong id="modal-trip-id">#-</strong>
+          </div>
+          <div class="payment-row">
+            <span>Payment Method:</span>
+            <strong id="modal-payment-method" style="text-transform: uppercase;">UPI</strong>
+          </div>
+          <div class="payment-row total-row">
+            <span>Total Payable:</span>
+            <span class="modal-amount" id="modal-fare-amount">₹0.00</span>
+          </div>
+        </div>
+
+        <div id="payment-alert" class="alert" style="display: none; margin-bottom: 1rem;"></div>
+
+        <button type="button" id="btn-pay-now" class="btn btn-success btn-full" style="font-size: 1.05rem; padding: 0.85rem;">
+          💳 Pay Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script>
+    var _name = localStorage.getItem('smart_ride_full_name');
+    if (_name) document.getElementById('riderNameBadge').textContent = '👋 ' + _name;
+  </script>
+  <script src="{{ url_for('static', filename='js/rider.js') }}"></script>
+</body>
+</html>

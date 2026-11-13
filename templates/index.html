@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Ride - Instant Ride Booking & Partner Network</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="container" style="max-width: 840px;">
+    <!-- Top Nav Bar -->
+    <nav class="top-nav">
+      <div class="nav-brand">🚗 <strong>Smart Ride</strong></div>
+      <div class="nav-links">
+        <a href="/login" class="nav-link">Sign In</a>
+        <a href="/register" class="nav-btn-primary">Create Account</a>
+      </div>
+    </nav>
+
+    <div class="header" style="margin-top: 1.5rem; margin-bottom: 2.5rem; text-align: center;">
+      <h1 style="font-size: 2.5rem; justify-content: center;">🚖 Welcome to Smart Ride</h1>
+      <p style="font-size: 1.1rem; color: #94a3b8; max-width: 540px; margin: 0.5rem auto 0 auto;">
+        Seamless peer-to-peer urban mobility powered by fair INR rate engines, real-time tracking, safety PIN verification, and Pink Ride options.
+      </p>
+    </div>
+
+    <!-- Portal Selection Grid -->
+    <div class="portal-grid">
+      <!-- Rider Mode Card -->
+      <div class="portal-card">
+        <div>
+          <span class="portal-icon">🗺️</span>
+          <h2>Rider Mode</h2>
+          <p>Book a ride, calculate fares in ₹, and track driver status in real-time.</p>
+        </div>
+        <a href="/rider" class="portal-btn rider">
+          Enter Rider Portal ➔
+        </a>
+      </div>
+
+      <!-- Driver Mode Card -->
+      <div class="portal-card">
+        <div>
+          <span class="portal-icon">🛺</span>
+          <h2>Driver Mode</h2>
+          <p>Accept incoming ride requests, verify PINs, and manage active trips.</p>
+        </div>
+        <a href="/driver" class="portal-btn driver">
+          Enter Driver Portal ➔
+        </a>
+      </div>
+    </div>
+
+    <!-- Local Authentication Status Display -->
+    <div style="text-align: center;">
+      <div class="user-session-badge">
+        <span>🔐 Local Auth Active:</span>
+        <span id="session-rider-preview" style="font-family: monospace;">Rider: ...</span>
+        <span>•</span>
+        <span id="session-driver-preview" style="font-family: monospace;">Driver: ...</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const riderId = getCurrentRiderId();
+      const driverId = getCurrentDriverId();
+      
+      const riderPrev = document.getElementById('session-rider-preview');
+      const driverPrev = document.getElementById('session-driver-preview');
+      
+      if (riderPrev) riderPrev.textContent = 'Rider: #' + riderId.slice(0, 8);
+      if (driverPrev) driverPrev.textContent = 'Driver: #' + driverId.slice(0, 8);
+    });
+  </script>
+</body>
+</html>

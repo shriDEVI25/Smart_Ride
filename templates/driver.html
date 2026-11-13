@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartRide - Driver Portal</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <div>
+        <h1>🛺 Driver Partner Portal</h1>
+        <p>Accept rides and earn with transparent per-km payouts</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="session-name" id="driverNameBadge"></span>
+        <button class="btn-logout" onclick="smartRideAuth.logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Header / Status Bar -->
+    <div class="header-actions">
+      <div class="driver-toggle-container">
+        <label class="switch">
+          <input type="checkbox" id="driver-status-toggle" checked>
+          <span class="slider"></span>
+        </label>
+        <span class="status-indicator">
+          <span class="status-dot online" id="status-dot"></span>
+          <span id="status-text">Online</span>
+        </span>
+      </div>
+
+      <button type="button" id="btn-refresh-trips" class="btn btn-secondary" style="flex: 0 0 auto;">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <div id="driver-alert" class="alert"></div>
+
+    <!-- Available Trips Section -->
+    <div id="available-trips-section">
+      <div class="card">
+        <div class="section-title">
+          <span>📡 Available Ride Requests</span>
+          <span id="trips-count-badge" class="status-badge status-requested" style="margin-left: auto;">0 Available</span>
+        </div>
+
+        <div id="trips-list" class="trip-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <p>Searching for nearby ride requests...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Ride Section (Hidden by default) -->
+    <div id="active-ride-section" style="display: none;">
+      <div class="card active-ride-card">
+        <div class="summary-header">
+          <div>
+            <span class="detail-label">Active Trip</span>
+            <div class="fare-amount" id="active-fare">₹0.00</div>
+          </div>
+          <div>
+            <span class="status-badge status-accepted" id="active-status">Accepted</span>
+          </div>
+        </div>
+
+        <div class="details-grid">
+          <div class="detail-item">
+            <div class="detail-label">Trip ID</div>
+            <div class="detail-val">#<span id="active-trip-id">-</span></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Vehicle Type</div>
+            <div class="detail-val" id="active-vehicle" style="text-transform: capitalize;">-</div>
+          </div>
+        </div>
+
+        <div class="details-grid" style="margin-bottom: 1rem;">
+          <div class="detail-item">
+            <div class="detail-label">Payment Status</div>
+            <div class="detail-val" id="active-payment-status">
+              <span class="status-badge status-pending" id="driver-payment-badge">Payment Pending</span>
+            </div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Payment Method</div>
+            <div class="detail-val" id="active-payment-method" style="text-transform: uppercase;">-</div>
+          </div>
+        </div>
+
+        <div id="active-pink-banner" style="display: none; margin-bottom: 1rem; background: rgba(244, 114, 182, 0.15); border: 1px solid #f472b6; border-radius: 8px; padding: 0.6rem 0.9rem; color: #f472b6; font-size: 0.85rem; font-weight: 600; align-items: center; gap: 0.5rem;">
+          🌸 Pink Ride: Women Passenger Requested
+        </div>
+
+        <div class="detail-item" style="margin-bottom: 1rem;">
+          <div class="detail-label">Passenger ID</div>
+          <div class="detail-val" id="active-rider-id" style="font-size: 0.95rem; font-family: monospace; word-break: break-all;">-</div>
+        </div>
+
+        <!-- Prominent Pickup & Dropoff Location Card -->
+        <div class="route-locations-box" style="margin-bottom: 1.25rem; background: #0f172a; border: 1px solid #334155;">
+          <div class="location-row">
+            <div class="location-marker pickup">A</div>
+            <div class="location-info">
+              <span class="location-tag pickup">Pickup Location</span>
+              <span class="location-coord" id="active-pickup-coord">-</span>
+            </div>
+          </div>
+          <div class="location-row">
+            <div class="location-marker dropoff">B</div>
+            <div class="location-info">
+              <span class="location-tag dropoff">Dropoff Location</span>
+              <span class="location-coord" id="active-dropoff-coord">-</span>
+            </div>
+          </div>
+          <div class="trip-stats-bar">
+            <span>📏 Distance: <strong id="active-distance" style="color: #f8fafc;">- km</strong></span>
+          </div>
+        </div>
+
+        <!-- Interactive Map Container -->
+        <div id="map" style="height: 320px; width: 100%; border-radius: 10px; margin-bottom: 15px;"></div>
+
+
+
+        <!-- Trip Verification -->
+        <div id="pin-verification-box" class="card" style="background: #0f172a; margin-bottom: 1rem; border-color: #334155;">
+          <div class="section-title" style="font-size: 0.95rem; margin-bottom: 0.5rem;">
+            🔐 Verify Passenger 4-Digit PIN
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            Ask the rider for their 4-digit safety PIN before starting the ride.
+          </p>
+          <div class="pin-input-group">
+            <input type="text" id="verify-pin-input" class="input-field pin-input"
+              maxlength="4" placeholder="0000"
+              inputmode="numeric" pattern="[0-9]*"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <button type="button" id="btn-verify-pin" class="btn btn-primary" style="flex: 1;">
+              Verify &amp; Start Ride
+            </button>
+          </div>
+          <div id="pin-verify-msg" style="font-size: 0.85rem; margin-top: 0.5rem; display: none;"></div>
+        </div>
+
+        <button type="button" id="btn-complete-trip" class="btn btn-success" style="width: 100%; display: none; font-size: 1.05rem; padding: 0.85rem;">
+          🏁 Complete Ride
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+  <script>
+    var _name = localStorage.getItem('smart_ride_full_name');
+    if (_name) document.getElementById('driverNameBadge').textContent = '👋 ' + _name;
+  </script>
+  <script src="{{ url_for('static', filename='js/driver.js') }}"></script>
+</body>
+</html>
